@@ -117,6 +117,7 @@ jobs:
 
     - name: 运行签到脚本
       run: |
-        python main_multi.py
+        python main_multi.py autorun
       env:
         TZ: Asia/Shanghai
+        AutoMihoyoBBS_autorun: "1"
