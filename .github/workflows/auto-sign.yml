@@ -91,6 +91,8 @@ jobs:
         # 创建第一个账号的配置文件
         cookie1 = os.environ.get('COOKIE1', '')
         if cookie1:
+            # 清理cookie中的换行符和多余空格
+            cookie1 = cookie1.replace('\n', '').replace('\r', '').strip()
             config1 = config_template.copy()
             config1['account']['cookie'] = cookie1
             with open('config/config.yaml', 'w', encoding='utf-8') as f:
@@ -101,6 +103,8 @@ jobs:
         for i in range(2, 10):  # 支持最多9个账号
             cookie = os.environ.get(f'COOKIE{i}', '')
             if cookie:
+                # 清理cookie中的换行符和多余空格
+                cookie = cookie.replace('\n', '').replace('\r', '').strip()
                 config_n = config_template.copy()
                 config_n['account']['cookie'] = cookie
                 filename = f'config/account{i}.yaml'
