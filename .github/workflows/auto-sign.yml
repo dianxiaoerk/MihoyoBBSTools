@@ -115,6 +115,21 @@ jobs:
         COOKIE4: ${{ secrets.MIYOUSHE_COOKIE4 }}
         COOKIE5: ${{ secrets.MIYOUSHE_COOKIE5 }}
 
+    - name: 创建推送配置文件
+      run: |
+        cat > config/push.ini << 'EOF'
+        [setting]
+        enable=true
+        push_server=telegram
+        error_push_only=false
+
+        [telegram]
+        api_url=api.telegram.org
+        bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}
+        chat_id=${{ secrets.TELEGRAM_CHAT_ID }}
+        EOF
+      if: ${{ secrets.TELEGRAM_BOT_TOKEN && secrets.TELEGRAM_CHAT_ID }}
+
     - name: 运行签到脚本
       run: |
         python main_multi.py autorun
