@@ -24,6 +24,82 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: 创建配置文件
+      run: |
+        mkdir -p config
+        cat > config/config.yaml << 'EOF'
+        enable: true
+        version: 15
+        push: ""
+        account:
+          cookie: "${{ secrets.MIYOUSHE_COOKIE }}"
+          stuid: "${{ secrets.STUID }}"
+          stoken: ""
+          mid: "${{ secrets.MID }}"
+        device:
+          name: "Xiaomi MI 6"
+          model: "Mi 6"
+          id: ""
+          fp: ""
+        mihoyobbs:
+          enable: false
+          checkin: true
+          checkin_list:
+            - 5
+            - 2
+          read: true
+          like: true
+          cancel_like: true
+          share: true
+        games:
+          cn:
+            enable: true
+            useragent: "Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36"
+            retries: 3
+            genshin:
+              checkin: true
+              black_list: []
+            honkai2:
+              checkin: false
+              black_list: []
+            honkai3rd:
+              checkin: false
+              black_list: []
+            tears_of_themis:
+              checkin: false
+              black_list: []
+            honkai_sr:
+              checkin: true
+              black_list: []
+            zzz:
+              checkin: false
+              black_list: []
+          os:
+            enable: false
+            cookie: ""
+            lang: "zh-cn"
+            genshin:
+              checkin: false
+              black_list: []
+            honkai3rd:
+              checkin: false
+              black_list: []
+            tears_of_themis:
+              checkin: false
+              black_list: []
+            honkai_sr:
+              checkin: false
+              black_list: []
+            zzz:
+              checkin: false
+              black_list: []
+        cloud_games:
+          cn:
+            enable: false
+          os:
+            enable: false
+        EOF
+
     - name: 运行签到脚本
       run: |
         python main.py
