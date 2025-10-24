@@ -33,9 +33,9 @@ jobs:
         push: ""
         account:
           cookie: "${{ secrets.MIYOUSHE_COOKIE }}"
-          stuid: "${{ secrets.STUID }}"
+          stuid: ""
           stoken: ""
-          mid: "${{ secrets.MID }}"
+          mid: ""
         device:
           name: "Xiaomi MI 6"
           model: "Mi 6"
@@ -111,9 +111,9 @@ jobs:
         push: ""
         account:
           cookie: "${{ secrets.MIYOUSHE_COOKIE2 }}"
-          stuid: "${{ secrets.STUID2 }}"
+          stuid: ""
           stoken: ""
-          mid: "${{ secrets.MID2 }}"
+          mid: ""
         device:
           name: "Xiaomi MI 6"
           model: "Mi 6"
