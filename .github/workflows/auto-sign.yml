@@ -118,18 +118,22 @@ jobs:
     - name: 创建推送配置文件
       if: ${{ env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' }}
       run: |
+        # 清理环境变量中的换行符和空格
+        BOT_TOKEN=$(echo "$TELEGRAM_BOT_TOKEN" | tr -d '\n\r' | xargs)
+        CHAT_ID=$(echo "$TELEGRAM_CHAT_ID" | tr -d '\n\r' | xargs)
+
         # 创建push.ini配置文件
         cat > config/push.ini << EOF
-        [setting]
-        enable=true
-        push_server=telegram
-        error_push_only=false
+[setting]
+enable=true
+push_server=telegram
+error_push_only=false
 
-        [telegram]
-        api_url=api.telegram.org
-        bot_token=${TELEGRAM_BOT_TOKEN}
-        chat_id=${TELEGRAM_CHAT_ID}
-        EOF
+[telegram]
+api_url=api.telegram.org
+bot_token=${BOT_TOKEN}
+chat_id=${CHAT_ID}
+EOF
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
