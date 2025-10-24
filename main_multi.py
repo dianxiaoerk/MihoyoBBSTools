@@ -101,37 +101,52 @@ def main_multi(autorun: bool) -> tuple:
         except KeyboardInterrupt:
             exit(0)
     results = {"ok": [], "close": [], "error": [], "captcha": []}
+    detailed_messages = []  # 存储每个账号的详细签到信息
+
     for i in config_list:
         log.info(f"正在执行 {i}")
         config.config_Path = os.path.join(config.path, i)
+
+        # 获取账号配置用于推送消息
+        config.load_config(config.config_Path)
+        account_name = i.replace('.yaml', '').replace('config', '主账号').replace('account', '账号')
+
         try:
             run_code, run_message = main.main()
         except (CookieError, StokenError) as e:
             results["error"].append(i)
+            error_msg = "账号 Cookie 出错！" if isinstance(e, CookieError) else "账号 Stoken 有问题！"
+            detailed_messages.append(f"【{account_name}】\n❌ {error_msg}")
             if config.config.get("push", "") != "":
                 push_handler = push.PushHandler(config.config["push"])
-                error_msg = "账号 Cookie 出错！" if isinstance(e, CookieError) else "账号 Stoken 有问题！"
                 push_handler.push(1, error_msg)
         else:
             # 增强对返回值的处理，确保所有可能的情况都被考虑到
             if run_code == 0:
                 results["ok"].append(i)
+                detailed_messages.append(f"【{account_name}】\n✅ 签到成功\n{run_message}")
             elif run_code == 1 or run_code == 2:
                 # 处理明确的失败状态
                 results["error"].append(i)
+                detailed_messages.append(f"【{account_name}】\n❌ 签到失败\n{run_message}")
             elif run_code == 3:
                 results["captcha"].append(i)
+                detailed_messages.append(f"【{account_name}】\n⚠️ 触发验证码\n{run_message}")
             else:
                 # 其他未知状态归类为未执行
                 results["close"].append(i)
+                detailed_messages.append(f"【{account_name}】\n⏸ 未执行")
         log.info(f"{i} 执行完毕")
-        
+
         time.sleep(random.randint(3, 10))
+
     print("")
-    push_message = f'脚本执行完毕，共执行{len(config_list)}个配置文件，成功{len(results["ok"])}个，' \
-                   f'没执行{len(results["close"])}个，失败{len(results["error"])}个' \
-                   f'\r\n没执行的配置文件：{results["close"]}\r\n执行失败的配置文件：{results["error"]}\r\n' \
-                   f'触发游戏签到验证码的配置文件：{results["captcha"]}'
+    # 生成详细的推送消息
+    summary = f'📊 执行概览\n共 {len(config_list)} 个账号，成功 {len(results["ok"])} 个，失败 {len(results["error"])} 个，未执行 {len(results["close"])} 个'
+    if len(results["captcha"]) > 0:
+        summary += f'，触发验证码 {len(results["captcha"])} 个'
+
+    push_message = summary + '\n\n' + '\n\n'.join(detailed_messages)
     log.info(push_message)
     # 更清晰的状态码逻辑
     status = 0  # 默认成功
