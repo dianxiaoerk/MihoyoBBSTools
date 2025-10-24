@@ -98,6 +98,8 @@ jobs:
             enable: false
           os:
             enable: false
+        web_activity:
+          enable: false
         EOF
 
     - name: 运行签到脚本
