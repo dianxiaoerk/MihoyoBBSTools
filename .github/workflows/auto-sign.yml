@@ -27,158 +27,93 @@ jobs:
     - name: 创建配置文件
       run: |
         mkdir -p config
-        cat > config/config.yaml << 'EOF'
-        enable: true
-        version: 15
-        push: ""
-        account:
-          cookie: "${{ secrets.MIYOUSHE_COOKIE }}"
-          stuid: ""
-          stoken: ""
-          mid: ""
-        device:
-          name: "Xiaomi MI 6"
-          model: "Mi 6"
-          id: ""
-          fp: ""
-        mihoyobbs:
-          enable: false
-          checkin: true
-          checkin_list:
-            - 5
-            - 2
-          read: true
-          like: true
-          cancel_like: true
-          share: true
-        games:
-          cn:
-            enable: true
-            useragent: "Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36"
-            retries: 3
-            genshin:
-              checkin: true
-              black_list: []
-            honkai2:
-              checkin: false
-              black_list: []
-            honkai3rd:
-              checkin: false
-              black_list: []
-            tears_of_themis:
-              checkin: false
-              black_list: []
-            honkai_sr:
-              checkin: true
-              black_list: []
-            zzz:
-              checkin: false
-              black_list: []
-          os:
-            enable: false
-            cookie: ""
-            lang: "zh-cn"
-            genshin:
-              checkin: false
-              black_list: []
-            honkai3rd:
-              checkin: false
-              black_list: []
-            tears_of_themis:
-              checkin: false
-              black_list: []
-            honkai_sr:
-              checkin: false
-              black_list: []
-            zzz:
-              checkin: false
-              black_list: []
-        cloud_games:
-          cn:
-            enable: false
-          os:
-            enable: false
-        web_activity:
-          enable: false
-        EOF
+        python3 << 'PYTHON_EOF'
+        import os
+        import yaml
 
-    - name: 创建第二个账号配置文件(如果有)
-      if: ${{ secrets.MIYOUSHE_COOKIE2 }}
-      run: |
-        cat > config/account2.yaml << 'EOF'
-        enable: true
-        version: 15
-        push: ""
-        account:
-          cookie: "${{ secrets.MIYOUSHE_COOKIE2 }}"
-          stuid: ""
-          stoken: ""
-          mid: ""
-        device:
-          name: "Xiaomi MI 6"
-          model: "Mi 6"
-          id: ""
-          fp: ""
-        mihoyobbs:
-          enable: false
-          checkin: true
-          checkin_list:
-            - 5
-            - 2
-          read: true
-          like: true
-          cancel_like: true
-          share: true
-        games:
-          cn:
-            enable: true
-            useragent: "Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36"
-            retries: 3
-            genshin:
-              checkin: true
-              black_list: []
-            honkai2:
-              checkin: false
-              black_list: []
-            honkai3rd:
-              checkin: false
-              black_list: []
-            tears_of_themis:
-              checkin: false
-              black_list: []
-            honkai_sr:
-              checkin: true
-              black_list: []
-            zzz:
-              checkin: false
-              black_list: []
-          os:
-            enable: false
-            cookie: ""
-            lang: "zh-cn"
-            genshin:
-              checkin: false
-              black_list: []
-            honkai3rd:
-              checkin: false
-              black_list: []
-            tears_of_themis:
-              checkin: false
-              black_list: []
-            honkai_sr:
-              checkin: false
-              black_list: []
-            zzz:
-              checkin: false
-              black_list: []
-        cloud_games:
-          cn:
-            enable: false
-          os:
-            enable: false
-        web_activity:
-          enable: false
-        EOF
+        config_template = {
+            'enable': True,
+            'version': 15,
+            'push': '',
+            'account': {
+                'cookie': '',
+                'stuid': '',
+                'stoken': '',
+                'mid': ''
+            },
+            'device': {
+                'name': 'Xiaomi MI 6',
+                'model': 'Mi 6',
+                'id': '',
+                'fp': ''
+            },
+            'mihoyobbs': {
+                'enable': False,
+                'checkin': True,
+                'checkin_list': [5, 2],
+                'read': True,
+                'like': True,
+                'cancel_like': True,
+                'share': True
+            },
+            'games': {
+                'cn': {
+                    'enable': True,
+                    'useragent': 'Mozilla/5.0 (Linux; Android 12; Unspecified Device) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36',
+                    'retries': 3,
+                    'genshin': {'checkin': True, 'black_list': []},
+                    'honkai2': {'checkin': False, 'black_list': []},
+                    'honkai3rd': {'checkin': False, 'black_list': []},
+                    'tears_of_themis': {'checkin': False, 'black_list': []},
+                    'honkai_sr': {'checkin': True, 'black_list': []},
+                    'zzz': {'checkin': False, 'black_list': []}
+                },
+                'os': {
+                    'enable': False,
+                    'cookie': '',
+                    'lang': 'zh-cn',
+                    'genshin': {'checkin': False, 'black_list': []},
+                    'honkai3rd': {'checkin': False, 'black_list': []},
+                    'tears_of_themis': {'checkin': False, 'black_list': []},
+                    'honkai_sr': {'checkin': False, 'black_list': []},
+                    'zzz': {'checkin': False, 'black_list': []}
+                }
+            },
+            'cloud_games': {
+                'cn': {'enable': False},
+                'os': {'enable': False}
+            },
+            'web_activity': {
+                'enable': False
+            }
+        }
+
+        # 创建第一个账号的配置文件
+        cookie1 = os.environ.get('COOKIE1', '')
+        if cookie1:
+            config1 = config_template.copy()
+            config1['account']['cookie'] = cookie1
+            with open('config/config.yaml', 'w', encoding='utf-8') as f:
+                yaml.dump(config1, f, allow_unicode=True, sort_keys=False)
+            print("已创建 config.yaml")
+
+        # 创建其他账号的配置文件
+        for i in range(2, 10):  # 支持最多9个账号
+            cookie = os.environ.get(f'COOKIE{i}', '')
+            if cookie:
+                config_n = config_template.copy()
+                config_n['account']['cookie'] = cookie
+                filename = f'config/account{i}.yaml'
+                with open(filename, 'w', encoding='utf-8') as f:
+                    yaml.dump(config_n, f, allow_unicode=True, sort_keys=False)
+                print(f"已创建 account{i}.yaml")
+        PYTHON_EOF
+      env:
+        COOKIE1: ${{ secrets.MIYOUSHE_COOKIE }}
+        COOKIE2: ${{ secrets.MIYOUSHE_COOKIE2 }}
+        COOKIE3: ${{ secrets.MIYOUSHE_COOKIE3 }}
+        COOKIE4: ${{ secrets.MIYOUSHE_COOKIE4 }}
+        COOKIE5: ${{ secrets.MIYOUSHE_COOKIE5 }}
 
     - name: 运行签到脚本
       run: |
