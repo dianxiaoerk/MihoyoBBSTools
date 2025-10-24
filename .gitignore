@@ -152,3 +152,5 @@ yaml/
 
 # Nix 编译输出
 result/
+config/*.yaml
+!config/*.example
