@@ -123,17 +123,21 @@ jobs:
         CHAT_ID=$(echo "$TELEGRAM_CHAT_ID" | tr -d '\n\r' | xargs)
 
         # 创建push.ini配置文件
-        cat > config/push.ini << EOF
-[setting]
-enable=true
-push_server=telegram
-error_push_only=false
+        cat > config/push.ini << 'PUSHEOF'
+        [setting]
+        enable=true
+        push_server=telegram
+        error_push_only=false
 
-[telegram]
-api_url=api.telegram.org
-bot_token=${BOT_TOKEN}
-chat_id=${CHAT_ID}
-EOF
+        [telegram]
+        api_url=api.telegram.org
+        bot_token=PLACEHOLDER_BOT_TOKEN
+        chat_id=PLACEHOLDER_CHAT_ID
+        PUSHEOF
+
+        # 替换占位符为实际值
+        sed -i "s/PLACEHOLDER_BOT_TOKEN/${BOT_TOKEN}/g" config/push.ini
+        sed -i "s/PLACEHOLDER_CHAT_ID/${CHAT_ID}/g" config/push.ini
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
