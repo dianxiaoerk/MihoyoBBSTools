@@ -118,7 +118,8 @@ jobs:
     - name: 创建推送配置文件
       if: ${{ env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' }}
       run: |
-        cat > config/push.ini << 'EOF'
+        # 创建push.ini配置文件
+        cat > config/push.ini << EOF
         [setting]
         enable=true
         push_server=telegram
@@ -126,8 +127,8 @@ jobs:
 
         [telegram]
         api_url=api.telegram.org
-        bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}
-        chat_id=${{ secrets.TELEGRAM_CHAT_ID }}
+        bot_token=${TELEGRAM_BOT_TOKEN}
+        chat_id=${TELEGRAM_CHAT_ID}
         EOF
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
