@@ -116,6 +116,7 @@ jobs:
         COOKIE5: ${{ secrets.MIYOUSHE_COOKIE5 }}
 
     - name: 创建推送配置文件
+      if: ${{ env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' }}
       run: |
         cat > config/push.ini << 'EOF'
         [setting]
@@ -128,7 +129,9 @@ jobs:
         bot_token=${{ secrets.TELEGRAM_BOT_TOKEN }}
         chat_id=${{ secrets.TELEGRAM_CHAT_ID }}
         EOF
-      if: ${{ secrets.TELEGRAM_BOT_TOKEN && secrets.TELEGRAM_CHAT_ID }}
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
     - name: 运行签到脚本
       run: |
