@@ -73,15 +73,298 @@ class PushHandler:
             return msg
 
     def telegram(self, status_id, push_message):
+        """
+        Telegram 推送（支持 HTML 格式化）
+        """
         http_proxy = self.cfg.get('telegram', 'http_proxy', fallback=None)
         session = get_new_session_use_proxy(http_proxy) if http_proxy else self.http
-        session.post(
-            url=f"https://{self.cfg.get('telegram', 'api_url')}/bot{self.cfg.get('telegram', 'bot_token')}/sendMessage",
-            data={
-                "chat_id": self.cfg.get('telegram', 'chat_id'),
-                "text": get_push_title(status_id) + "\r\n" + push_message
-            }
-        )
+
+        # 格式化消息内容
+        formatted_message = self._format_telegram_message(status_id, push_message)
+
+        # 检查消息长度，Telegram 限制为 4096 字符
+        if len(formatted_message) > 4096:
+            # 如果超长，分段发送
+            chunks = self._split_telegram_message(formatted_message, 4096)
+            for i, chunk in enumerate(chunks):
+                session.post(
+                    url=f"https://{self.cfg.get('telegram', 'api_url')}/bot{self.cfg.get('telegram', 'bot_token')}/sendMessage",
+                    data={
+                        "chat_id": self.cfg.get('telegram', 'chat_id'),
+                        "text": chunk,
+                        "parse_mode": "HTML"
+                    }
+                )
+                # 避免发送过快
+                if i < len(chunks) - 1:
+                    time.sleep(0.5)
+        else:
+            session.post(
+                url=f"https://{self.cfg.get('telegram', 'api_url')}/bot{self.cfg.get('telegram', 'bot_token')}/sendMessage",
+                data={
+                    "chat_id": self.cfg.get('telegram', 'chat_id'),
+                    "text": formatted_message,
+                    "parse_mode": "HTML"
+                }
+            )
+
+    def _format_telegram_message(self, status_id, push_message):
+        """
+        格式化 Telegram 消息为 HTML 格式
+        """
+        # 获取状态对应的图标
+        status_emoji = {
+            0: "✅",   # 成功
+            1: "❌",   # 失败
+            2: "⚠️",   # 部分失败
+            3: "🔐",   # 触发验证码
+            -1: "📢",  # 配置更新
+            -2: "❓",  # 错误
+            -99: "🚫"  # 依赖缺失
+        }
+
+        emoji = status_emoji.get(status_id, "ℹ️")
+        title = get_push_title(status_id)
+
+        # 构建 HTML 格式的消息
+        html_message = f"<b>{emoji} {title}</b>\n"
+
+        # 处理消息内容
+        lines = push_message.split('\n')
+        formatted_lines = []
+
+        i = 0
+        in_account_block = False
+
+        while i < len(lines):
+            line = lines[i].strip()
+
+            if not line:
+                formatted_lines.append("")
+                i += 1
+                continue
+
+            # 处理执行概览（📊 开头）
+            if line.startswith('📊'):
+                formatted_lines.append(f"\n<b>{line}</b>")
+                i += 1
+                # 下一行如果是统计信息，也加粗
+                if i < len(lines) and ('成功' in lines[i] or '失败' in lines[i]):
+                    formatted_lines.append(f"<b>{lines[i].strip()}</b>")
+                    i += 1
+                formatted_lines.append("\n<b>━━━━━━━━━━━━━━━━━━━━</b>")
+                continue
+
+            # 检测账号信息行（包含账号名称的行）
+            # 匹配模式：账号X、主账号、【xxx】等
+            if any(keyword in line for keyword in ['账号', '【', '】']):
+                # 检查是否是单独的账号行，还是包含游戏信息的长行
+                if '🎮' in line or '🚀' in line or '原神' in line or '星铁' in line or '崩坏' in line:
+                    # 包含游戏信息的复杂行，需要拆分
+                    formatted_lines.append("")  # 空行分隔
+                    account_info = self._format_complex_account_line(line)
+                    formatted_lines.extend(account_info)
+                else:
+                    # 简单的账号标题行
+                    formatted_lines.append("")
+                    formatted_lines.append(f"<b>👤 {line}</b>")
+                i += 1
+                continue
+
+            # 处理游戏签到信息行（🎮 或 🚀 开头，或包含游戏名）
+            if any(indicator in line for indicator in ['🎮', '🚀', '原神：', '星铁：', '崩坏', '绝区零：', '米游社：']):
+                game_info = self._format_game_line(line)
+                formatted_lines.extend(game_info)
+                i += 1
+                continue
+
+            # 处理状态行（✅ ❌ ⚠️ 开头）
+            if any(emoji in line[:2] for emoji in ['✅', '❌', '⚠️', '⏸']):
+                formatted_lines.append(f"<i>{line}</i>")
+                i += 1
+                continue
+
+            # 处理错误信息
+            if any(keyword in line for keyword in ['出错', '失败', '错误', '异常', 'Cookie', 'Stoken']):
+                formatted_lines.append(f"<i>⚠️ {line}</i>")
+                i += 1
+                continue
+
+            # 其他普通行
+            formatted_lines.append(line)
+            i += 1
+
+        html_message += '\n'.join(formatted_lines)
+
+        # 添加底部时间戳
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        html_message += f"\n\n<b>━━━━━━━━━━━━━━━━━━━━</b>"
+        html_message += f"\n<i>⏰ {timestamp}</i>"
+
+        return html_message
+
+    def _format_complex_account_line(self, line):
+        """
+        格式化包含多个游戏信息的复杂账号行
+        示例输入: "账号2 (天凉好个秋) 🎮 原神：签到15天 → 冒险家的经验 ×5 🚀 星铁：签到14天 → 信用点 ×5000"
+        """
+        result = []
+
+        # 提取账号名称
+        account_name = ""
+        if '🎮' in line:
+            account_name = line.split('🎮')[0].strip()
+        elif '🚀' in line:
+            account_name = line.split('🚀')[0].strip()
+
+        if account_name:
+            result.append(f"<b>👤 {account_name}</b>")
+
+        # 拆分游戏信息
+        # 用 🎮 和 🚀 作为分隔符
+        games_text = line
+        if account_name:
+            games_text = line[len(account_name):].strip()
+
+        # 分割各个游戏
+        import re
+        game_parts = re.split(r'(🎮|🚀)', games_text)
+
+        current_game = ""
+        for part in game_parts:
+            if part in ['🎮', '🚀']:
+                if current_game:
+                    game_info = self._format_game_line(current_game)
+                    result.extend(game_info)
+                current_game = part
+            elif part.strip():
+                current_game += part
+
+        # 处理最后一个游戏
+        if current_game:
+            game_info = self._format_game_line(current_game)
+            result.extend(game_info)
+
+        return result
+
+    def _format_game_line(self, line):
+        """
+        格式化单个游戏信息行
+        示例: "🎮 原神：签到15天 → 冒险家的经验 ×5"
+        """
+        result = []
+        line = line.strip()
+
+        # 游戏名称映射到 emoji
+        game_emoji_map = {
+            '原神': '🎮',
+            '星铁': '🚀',
+            '星穹铁道': '🚀',
+            '崩坏3': '⚔️',
+            '崩坏：星穹铁道': '🚀',
+            '绝区零': '🎯',
+            '未定事件簿': '📖',
+            '崩坏学园2': '🎓',
+            '米游社': '🏠',
+            '云原神': '☁️',
+            '云绝区零': '☁️'
+        }
+
+        # 检测游戏名称
+        game_name = ""
+        game_emoji = ""
+        for game, emoji in game_emoji_map.items():
+            if game in line:
+                game_name = game
+                game_emoji = emoji
+                break
+
+        # 如果行首已有 emoji，使用它
+        if line.startswith('🎮') or line.startswith('🚀') or line.startswith('⚔️') or line.startswith('🎯'):
+            game_emoji = line[0]
+            line = line[1:].strip()
+
+        # 分割游戏名称和详情
+        if '：' in line:
+            parts = line.split('：', 1)
+            if not game_name:
+                game_name = parts[0].strip()
+            details = parts[1].strip() if len(parts) > 1 else ""
+        elif ':' in line:
+            parts = line.split(':', 1)
+            if not game_name:
+                game_name = parts[0].strip()
+            details = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            details = line
+
+        # 输出游戏标题
+        if game_name:
+            result.append(f"  {game_emoji} <b>{game_name}</b>")
+
+        # 处理详情信息
+        if details:
+            # 检查是否包含奖励信息（→ 或 ×）
+            if '→' in details or '×' in details:
+                # 格式化签到天数
+                if '签到' in details and '天' in details:
+                    # 提取签到天数
+                    import re
+                    match = re.search(r'签到(\d+)天', details)
+                    if match:
+                        days = match.group(1)
+                        details_before_arrow = details.split('→')[0].strip()
+                        result.append(f"      <code>📅 {details_before_arrow}</code>")
+
+                        # 提取奖励信息
+                        if '→' in details:
+                            reward = details.split('→', 1)[1].strip()
+                            result.append(f"      <code>🎁 {reward}</code>")
+                    else:
+                        result.append(f"      <code>{details}</code>")
+                else:
+                    result.append(f"      <code>{details}</code>")
+            elif '未绑定' in details or '未开启' in details:
+                result.append(f"      <i>⚪ {details}</i>")
+            else:
+                result.append(f"      <code>{details}</code>")
+
+        return result
+
+    def _split_telegram_message(self, message, max_length):
+        """
+        将超长消息分割成多个部分
+        """
+        if len(message) <= max_length:
+            return [message]
+
+        chunks = []
+        current_chunk = ""
+        lines = message.split('\n')
+
+        for line in lines:
+            # 如果单行就超长，强制截断
+            if len(line) > max_length:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                    current_chunk = ""
+                # 分割超长行
+                for i in range(0, len(line), max_length - 100):
+                    chunks.append(line[i:i + max_length - 100])
+                continue
+
+            # 检查添加这行是否会超长
+            if len(current_chunk) + len(line) + 1 > max_length:
+                chunks.append(current_chunk)
+                current_chunk = line
+            else:
+                current_chunk += ("\n" if current_chunk else "") + line
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        return chunks
 
     def ftqq(self, status_id, push_message):
         """
