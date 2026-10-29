@@ -152,3 +152,16 @@ jobs:
       env:
         TZ: Asia/Shanghai
         AutoMihoyoBBS_autorun: "1"
+
+  # 保活：调用 API 重新启用本工作流，防止仓库 60 天无活动后被 GitHub 自动停用（不产生提交）
+  # Keepalive: re-enable this workflow via the API so GitHub won't disable it after 60 days of repo inactivity (no commits)
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+    - name: 工作流保活
+      run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/auto-sign.yml/enable"
+      env:
+        GH_TOKEN: ${{ github.token }}
